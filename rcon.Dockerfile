@@ -1,6 +1,6 @@
 FROM itzg/rcon@sha256:c9521f333bf9eaedf2db0acd750e67be88eaaa9c5e9026385bd875dc18a49110 AS rcon
 
-FROM node:24.22.1-bookworm-slim
+FROM node:24.22.3-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 COPY --from=rcon /opt/rcon-web-admin-0.14.1 /opt/rcon-web-admin-0.14.1
 RUN ln -s /opt/rcon-web-admin-0.14.1 /opt/rcon-web-admin
 WORKDIR /opt/rcon-web-admin
