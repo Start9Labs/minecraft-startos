@@ -2,13 +2,13 @@ import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
-import { z } from '@start9labs/start-sdk'
+import { z, type T } from '@start9labs/start-sdk'
 import * as yauzl from 'yauzl'
 import { uploadedModpackSubpath } from './fileModels/store.json'
 import { i18n } from './i18n'
 import { sdk } from './sdk'
 
-const maximumUploadBytes = 512 * 1024 * 1024
+export const maximumUploadBytes = 512 * 1024 * 1024
 const maximumIndexBytes = 16 * 1024 * 1024
 const indexFilename = 'modrinth.index.json'
 
@@ -224,22 +224,19 @@ export const removeTrackedMods = async (
 }
 
 export const replaceUploadedModpack = async (
-  file: { path: string; commitment: { size: number } },
+  file: T.UploadedFile,
   persist: (uploadHash: string) => Promise<void>,
 ): Promise<void> => {
-  if (file.commitment.size > maximumUploadBytes) {
-    throw new Error(i18n('The uploaded modpack exceeds the 512 MiB limit.'))
-  }
-
+  const uploadedPath = sdk.volumes.main.subpath(file.path)
   const destination = sdk.volumes.main.subpath(uploadedModpackSubpath)
   const temporary = `${destination}.${randomUUID()}.tmp`
   const backup = `${destination}.${randomUUID()}.bak`
   let hasBackup = false
   let promoted = false
 
-  await fs.mkdir(dirname(destination), { recursive: true })
   try {
-    await fs.copyFile(file.path, temporary)
+    await fs.mkdir(dirname(destination), { recursive: true })
+    await fs.copyFile(uploadedPath, temporary)
     const staged = await fs.stat(temporary)
     if (staged.size > maximumUploadBytes) {
       throw new Error(i18n('The uploaded modpack exceeds the 512 MiB limit.'))
@@ -269,6 +266,9 @@ export const replaceUploadedModpack = async (
       )
     }
     const uploadHash = await sha256File(temporary)
+    // The image skips recursive chown when the volume already has its owner.
+    const { uid, gid } = await fs.stat(sdk.volumes.main.subpath(''))
+    await fs.chown(temporary, uid, gid)
 
     try {
       await fs.rename(destination, backup)
@@ -307,5 +307,6 @@ export const replaceUploadedModpack = async (
     }
     await fs.rm(temporary, { force: true })
     if (!hasBackup) await fs.rm(backup, { force: true })
+    await fs.rm(uploadedPath, { force: true })
   }
 }

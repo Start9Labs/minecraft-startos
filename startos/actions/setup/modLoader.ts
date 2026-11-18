@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto'
 import { promises as fs } from 'node:fs'
+import { type T } from '@start9labs/start-sdk'
 import {
   defaultJavaVersion,
   defaultModLoader,
@@ -8,7 +10,7 @@ import {
   uploadedModpackPath,
 } from '../../fileModels/store.json'
 import { i18n } from '../../i18n'
-import { replaceUploadedModpack } from '../../modpacks'
+import { maximumUploadBytes, replaceUploadedModpack } from '../../modpacks'
 import { sdk } from '../../sdk'
 
 const { InputSpec, Value, Variants, List } = sdk
@@ -165,94 +167,104 @@ const moddedSpec = (loader: 'neoforge' | 'fabric') =>
     ),
   })
 
-const modpackSpec = InputSpec.of({
-  source: Value.union({
-    name: i18n('Modpack Source'),
-    description: i18n(
-      'Where to get the pack.\n- Modrinth project or URL: a Modrinth project is checked for a new version on every start; a direct .mrpack link is downloaded once and cached\n- Upload a .mrpack file: a pack exported from a launcher, kept on the server',
-    ),
-    default: 'url',
-    variants: Variants.of({
-      url: {
-        name: i18n('Modrinth project or URL'),
-        spec: InputSpec.of({
-          url: Value.text({
-            name: i18n('Modpack'),
-            description: i18n(
-              'A Modrinth modpack slug or project ID, a project page URL, a version page URL (to pin one version), or a direct URL to a .mrpack file.',
-            ),
-            required: true,
-            default: null,
-            placeholder: 'cobblemon-fabric',
-            masked: false,
+const inputSpec = async ({ effects }: { effects: T.Effects }) => {
+  const modpackSpec = InputSpec.of({
+    source: Value.union({
+      name: i18n('Modpack Source'),
+      description: i18n(
+        'Where to get the pack.\n- Modrinth project or URL: a Modrinth project is checked for a new version on every start; a direct .mrpack link is downloaded once and cached\n- Upload a .mrpack file: a pack exported from a launcher, kept on the server',
+      ),
+      default: 'url',
+      variants: Variants.of({
+        url: {
+          name: i18n('Modrinth project or URL'),
+          spec: InputSpec.of({
+            url: Value.text({
+              name: i18n('Modpack'),
+              description: i18n(
+                'A Modrinth modpack slug or project ID, a project page URL, a version page URL (to pin one version), or a direct URL to a .mrpack file.',
+              ),
+              required: true,
+              default: null,
+              placeholder: 'cobblemon-fabric',
+              masked: false,
+            }),
           }),
-        }),
-      },
-      upload: {
-        name: i18n('Upload a .mrpack file'),
-        spec: InputSpec.of({
-          file: Value.file({
-            name: i18n('Modpack File'),
-            description: i18n(
-              'A .mrpack exported from a launcher. Uploads are limited to 512 MiB and kept on the server volume. Leave empty to keep the pack already uploaded and change only the options below.',
-            ),
-            extensions: ['.mrpack'],
-            required: false,
+        },
+        upload: {
+          name: i18n('Upload a .mrpack file'),
+          spec: InputSpec.of({
+            file: Value.file({
+              name: i18n('Modpack File'),
+              // Validation must not replace the active pack before it succeeds.
+              uploadId: await sdk.prepareUpload(effects, {
+                volume: 'main',
+                path: `.modpack-upload-${randomUUID()}.mrpack`,
+                maxSize: maximumUploadBytes,
+              }),
+              description: i18n(
+                'A .mrpack exported from a launcher. Uploads are limited to 512 MiB and kept on the server volume. Leave empty to keep the pack already uploaded and change only the options below.',
+              ),
+              extensions: ['.mrpack'],
+              required: false,
+            }),
           }),
-        }),
-      },
+        },
+      }),
     }),
-  }),
-  javaVersion: javaVersionField,
-  forceResync: Value.toggle({
-    name: i18n('Force Re-sync'),
-    description: i18n(
-      'Turn on when a pack has changed without its source changing. Modrinth project sources are checked on start, but direct .mrpack URLs stay cached unless Force Re-sync is enabled. Uploaded packs remain on the volume. Force Re-sync stays enabled until you turn it off.',
-    ),
-    default: false,
-  }),
-  excludeFiles: Value.textarea({
-    name: i18n('Exclude Files'),
-    description: i18n(
-      'Optional. One entry per line. Use this only when a pack marks a client-only mod as server-compatible, which shows up as a crash on start naming that mod. Each entry is a case-insensitive substring of the file path.',
-    ),
-    required: false,
-    default: null,
-    placeholder: 'notenoughanimations',
-    minLength: null,
-    maxLength: maximumExclusionsCharacters,
-  }),
-})
+    javaVersion: javaVersionField,
+    forceResync: Value.toggle({
+      name: i18n('Force Re-sync'),
+      description: i18n(
+        'Turn on when a pack has changed without its source changing. Modrinth project sources are checked on start, but direct .mrpack URLs stay cached unless Force Re-sync is enabled. Uploaded packs remain on the volume. Force Re-sync stays enabled until you turn it off.',
+      ),
+      default: false,
+    }),
+    excludeFiles: Value.textarea({
+      name: i18n('Exclude Files'),
+      description: i18n(
+        'Optional. One entry per line. Use this only when a pack marks a client-only mod as server-compatible, which shows up as a crash on start naming that mod. Each entry is a case-insensitive substring of the file path.',
+      ),
+      required: false,
+      default: null,
+      placeholder: 'notenoughanimations',
+      minLength: null,
+      maxLength: maximumExclusionsCharacters,
+    }),
+  })
 
-const loaderVariants = Variants.of({
-  vanilla: {
-    name: i18n('Vanilla (no mods) — default'),
-    spec: InputSpec.of({}),
-  },
-  neoforge: {
-    name: i18n('NeoForge (recommended for mods)'),
-    spec: moddedSpec('neoforge'),
-  },
-  fabric: {
-    name: i18n('Fabric'),
-    spec: moddedSpec('fabric'),
-  },
-  modpack: {
-    name: i18n('Modrinth Modpack (installs mods, configs and loader together)'),
-    spec: modpackSpec,
-  },
-})
+  const loaderVariants = Variants.of({
+    vanilla: {
+      name: i18n('Vanilla (no mods) — default'),
+      spec: InputSpec.of({}),
+    },
+    neoforge: {
+      name: i18n('NeoForge (recommended for mods)'),
+      spec: moddedSpec('neoforge'),
+    },
+    fabric: {
+      name: i18n('Fabric'),
+      spec: moddedSpec('fabric'),
+    },
+    modpack: {
+      name: i18n(
+        'Modrinth Modpack (installs mods, configs and loader together)',
+      ),
+      spec: modpackSpec,
+    },
+  })
 
-const inputSpec = InputSpec.of({
-  loader: Value.union({
-    name: i18n('Mod Loader'),
-    description: i18n(
-      '- Vanilla: plain Minecraft, no mods\n- NeoForge: NeoForge with mods you pick from Modrinth\n- Fabric: Fabric with mods you pick from Modrinth\n- Modrinth Modpack: a ready-made pack, installing its mods, configs and loader build together',
-    ),
-    default: defaultModLoader,
-    variants: loaderVariants,
-  }),
-})
+  return InputSpec.of({
+    loader: Value.union({
+      name: i18n('Mod Loader'),
+      description: i18n(
+        '- Vanilla: plain Minecraft, no mods\n- NeoForge: NeoForge with mods you pick from Modrinth\n- Fabric: Fabric with mods you pick from Modrinth\n- Modrinth Modpack: a ready-made pack, installing its mods, configs and loader build together',
+      ),
+      default: defaultModLoader,
+      variants: loaderVariants,
+    }),
+  })
+}
 
 export const modLoader = sdk.Action.withInput(
   'mod-loader',
