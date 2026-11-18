@@ -51,7 +51,9 @@ Three images, and **the Java the server runs on is decided at start**.
 
 **The server image bundles one Java — the one vanilla needs — and every other Java is downloaded on demand.** Vanilla always runs on the bundled Java 25. A modded server or modpack runs on the Java chosen in the Mod Loader action (Java 25, 21, 17, or 8); any choice other than the bundled one is fetched from Adoptium by the `ensure-jre` oneshot into `start9/jre/<version>/` on the volume the first time it is needed, then put ahead of the image's own Java on the server process's `PATH`. `JAVA_HOME` is left pointing at the image's Java, which is what the image's own tooling (`mc-image-helper`) runs on; only the server, and the loader installers it spawns, see the chosen one. A selected loader, version, and modpack must support the chosen Java. Switching the Java restarts the server onto it.
 
-**JVM security default:** the common server environment sets `JAVA_TOOL_OPTIONS=-XX:Flags=/start9/java-security.flags`, whose JVM flags disable `UseBASE64Intrinsics` (equivalent to `-XX:-UseBASE64Intrinsics`) for both the bundled Java/helper and the server Java selected through `PATH`, including JREs already cached on the volume. This mitigates CVE-2026-114938 (Java4Shell) on affected AVX-512 x86 processors; ARM is not affected by this CVE, and no service-specific exploit has been established. The flags file tolerates the missing intrinsic on Java 8, then restores strict checking of unknown JVM options. Java 8 rejects the unsupported flag if it is placed directly in `JAVA_TOOL_OPTIONS`, even with `-XX:+IgnoreUnrecognizedVMOptions` in that variable. This is a default, not enforcement over custom configuration: launcher `JVM_OPTS`/`JVM_XX_OPTS`, loader argument files or modpack scripts can supply later opposing flags or replace the environment. Existing pack files and JVM settings are not rewritten by this mitigation.
+**JVM security default:** the common server environment sets `JAVA_TOOL_OPTIONS=-XX:Flags=/start9/java-security.flags`. Its single line, `-UseBASE64Intrinsics`, disables the intrinsic in bundled Java/helper processes and PATH-selected Java 17/21/25, including cached JREs. This mitigates CVE-2026-114938 (Java4Shell) on affected AVX-512 VBMI x86 processors; ARM is unaffected. Java 8 skips flags files named in `JAVA_TOOL_OPTIONS`; putting the unsupported intrinsic flag directly in that variable breaks Java 8 startup.
+
+The package exposes no custom JVM-option setting, and the image regenerates `user_jvm_args.txt` on each `run.sh` launch. Modpack overrides can nevertheless replace `run.sh`: the helper extracts them before reusing an already-installed loader. A pack-supplied startup script can pass a later opposing flag or replace the environment. The mitigation does not rewrite pack startup scripts.
 
 The oneshot verifies the tarball's SHA-256 against the Adoptium API, keeps a runtime that is already in place, removes the emSign roots from that runtime's `cacerts` on every run, and retries with backoff if the download fails — a modded server whose Java cannot be fetched stays waiting on it rather than starting on the wrong one.
 
@@ -290,7 +292,7 @@ startos_managed_env_vars:
   - VERSION
   - INIT_MEMORY
   - MAX_MEMORY
-  - JAVA_TOOL_OPTIONS # disables Base64 intrinsics by default; Java 8 ignores the unsupported flag
+  - JAVA_TOOL_OPTIONS # names the Base64-intrinsics flags file; Java 8 skips that file
   - RCON_PASSWORD
   - SKIP_SERVER_PROPERTIES
   - PATH # modded only, when a downloaded Java is chosen; JAVA_HOME stays the image's

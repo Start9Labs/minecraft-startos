@@ -138,8 +138,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   }
 
   const minecraftEnv: Record<string, string> = {
-    // Mitigate CVE-2026-114938 in helpers and PATH-selected JREs; custom flags can override it.
-    // The flags file tolerates Java 8's missing intrinsic without ignoring other unknown options.
+    // CVE-2026-114938: Java 8 skips this flags file but rejects -XX:-UseBASE64Intrinsics inline.
     JAVA_TOOL_OPTIONS: '-XX:Flags=/start9/java-security.flags',
     EULA: 'TRUE',
     TYPE: {

@@ -38,3 +38,4 @@ verified, tried, and decided belongs in the commit message and the PR body.
 - **Keep `SKIP_SERVER_PROPERTIES`.** The package owns `server.properties`; the image would otherwise regenerate it from env and overwrite every managed setting.
 - **Bump `rconWebAdminDbPath` in `main.ts` with the rcon-web-admin version in `rcon.Dockerfile`.** The path embeds the rcon-web-admin version, and a stale one persists nothing.
 - **Edit the whitelist over RCON, never by writing `whitelist.json`.** Only the server resolves each name to the UUID that matches its online mode.
+- **Retire the Java4Shell override only after bundled and previously cached affected JREs are patched.** A new image does not refresh `start9/jre/` on existing volumes.

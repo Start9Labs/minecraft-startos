@@ -236,7 +236,7 @@ export const replaceUploadedModpack = async (
 
   try {
     await fs.mkdir(dirname(destination), { recursive: true })
-    await fs.copyFile(uploadedPath, temporary)
+    await fs.rename(uploadedPath, temporary)
     const staged = await fs.stat(temporary)
     if (staged.size > maximumUploadBytes) {
       throw new Error(i18n('The uploaded modpack exceeds the 512 MiB limit.'))

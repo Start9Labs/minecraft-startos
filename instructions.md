@@ -75,7 +75,4 @@ Turn **Online Mode** off under **Configure Server** to let clients join without 
 
 - Hand-picked loader options are limited to NeoForge and Fabric. Forge and Quilt are available through compatible Modrinth modpacks; other non-vanilla modes such as proxy stacks and Spigot/Paper plugins are not surfaced as StartOS actions.
 - The image's environment-variable-driven configuration is bypassed (the package writes `server.properties` directly), so settings normally exposed through upstream env vars must be set through **Configure Server** or by hand-editing the file.
-
-### JVM security default
-
-The package disables JVM Base64 intrinsics by default to mitigate CVE-2026-114938 (Java4Shell) on affected AVX-512 x86 processors. ARM is not affected by this CVE; no Minecraft-specific exploit has been established. The default reaches the bundled Java and downloaded Java runtimes already on your volume, and keeps Java 8 compatible. Custom launcher or modpack JVM options can override it. Do not add `-XX:+UseBASE64Intrinsics` to custom flags; this mitigation does not rewrite your pack configuration.
+- Use modpacks whose startup scripts retain the Java4Shell mitigation; a pack-provided `run.sh` can override it by adding `-XX:+UseBASE64Intrinsics`.
