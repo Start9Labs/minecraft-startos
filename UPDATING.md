@@ -38,11 +38,12 @@ This package wraps `itzg/minecraft-server` (the canonical containerized Minecraf
 **`node`** — the runtime the console runs on.
 
 - Canonical home: <https://hub.docker.com/_/node> (release schedule and security releases at <https://nodejs.org/en/about/previous-releases>).
-- Track the newest patch of the active LTS line:
+- Track the newest patch of the active LTS line, then read the multi-arch digest of its `-bookworm-slim` tag (`<version>` without the leading `v`):
   ```sh
   curl -fsSL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts)][0].version'
+  curl -fsSL "https://hub.docker.com/v2/repositories/library/node/tags/<version>-bookworm-slim" | jq -r .digest
   ```
-- Pinned in `rcon.Dockerfile` as `FROM node:<version>-bookworm-slim`.
+- Pinned in `rcon.Dockerfile` as `FROM node:<version>-bookworm-slim@<digest>`. Use the complete query result, including its `sha256:` prefix.
 
 **`nginx`** — the `rcon-proxy` reverse-proxy image.
 
@@ -58,13 +59,11 @@ This package wraps `itzg/minecraft-server` (the canonical containerized Minecraf
 
 **`itzg/minecraft-server` + Minecraft release** (move together):
 
-1. In `startos/manifest/index.ts`, update the `dockerTag` for the `minecraft-server` image to `itzg/minecraft-server:<base>@sha256:<digest>` using the new base tag (e.g. `java25`) and the digest from the Docker Hub query above. If the base tag's Java changed, update `bundledJavaVersion` and the `javaVersionSchema` enum as described above.
+1. In `startos/manifest/index.ts`, update the `dockerTag` for the `minecraft-server` image to `itzg/minecraft-server:<base>@<digest>` using the new base tag (e.g. `java25`) and the complete digest from the Docker Hub query above, including its `sha256:` prefix. If the base tag's Java changed, update `bundledJavaVersion` and the `javaVersionSchema` enum as described above.
 2. In `startos/main.ts`, update `vanillaVersion` to the new Mojang release. Confirm the release runs on the Java the chosen base tag bundles — vanilla has no other Java to fall back on.
 
-**`itzg/rcon`**: in `rcon.Dockerfile`, update the `FROM itzg/rcon@sha256:<digest>` line to the new digest. If the image's rcon-web-admin version changed, update the `COPY` and `ln` paths with it, and `rconWebAdminDbPath` in `startos/main.ts`; re-check the image's config (`docker buildx imagetools inspect itzg/rcon@sha256:<digest> --format '{{json .Image}}'`) against the `WORKDIR`, `ENV` and `ENTRYPOINT` the Dockerfile restates. Its `apply-patches.js` throws when a snippet no longer matches, which is deliberate — a silently unpatched rcon-web-admin has a `pushState` that takes the page down and a dropdown that renders empty. Re-derive the patch rather than dropping it.
+**`itzg/rcon`**: in `rcon.Dockerfile`, update the `FROM itzg/rcon@<digest>` line to the complete digest from the Docker Hub query, including its `sha256:` prefix. If the image's rcon-web-admin version changed, update the `COPY` and `ln` paths with it, and `rconWebAdminDbPath` in `startos/main.ts`; re-check the image's config (`docker buildx imagetools inspect itzg/rcon@<digest> --format '{{json .Image}}'`) against the `WORKDIR`, `ENV` and `ENTRYPOINT` the Dockerfile restates. Its `apply-patches.js` throws when a snippet no longer matches, which is deliberate — a silently unpatched rcon-web-admin has a `pushState` that takes the page down and a dropdown that renders empty. Re-derive the patch rather than dropping it.
 
-**`node`**: in `rcon.Dockerfile`, update the `FROM node:<version>-bookworm-slim` line. A major bump needs the console checked on it: rcon-web-admin 0.14.1 and its dependencies are old pure-JS code.
+**`node`**: in `rcon.Dockerfile`, update the `FROM node:<version>-bookworm-slim@<digest>` line, tag and digest together. The build pulls by digest, so a tag edited without its digest still ships the old Node. A major bump needs the console checked on it: rcon-web-admin 0.14.1 and its dependencies are old pure-JS code.
 
 **`nginx` (`rcon-proxy`)**: in `startos/manifest/index.ts`, update the `dockerTag` for the `rcon-proxy` image to the new `nginx:<tag>-alpine` value.
-
-After any of the above, bump `version` / `releaseNotes` in `startos/versions/current.ts` per the standard packaging conventions.

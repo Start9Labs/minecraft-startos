@@ -59,7 +59,7 @@ The oneshot verifies the tarball's SHA-256 against the Adoptium API, keeps a run
 
 The server image is built through the root `Dockerfile`, a temporary layer that upgrades Ubuntu's `ca-certificates` and removes the emSign roots from the bundled Java's `cacerts`; it comes out once upstream ships an image built on fixed stores. The server image and the `itzg/rcon` image the console's code is taken from are **pinned by digest**, so a rebuild produces the same bits rather than following a moving tag. The downloaded runtimes are not pinned: each is the latest GA build of its release line at download time.
 
-**The console image is built here, not consumed as-is.** It copies rcon-web-admin 0.14.1, with its installed dependencies and core widgets, out of the `itzg/rcon` image and runs it on digest-pinned `node:24.22.3-bookworm-slim`. It also applies two patches to rcon-web-admin's browser code — a `history.pushState` call that throws and takes the page down with it, and a dropdown that renders empty until it is refreshed. The build fails loudly if either patch no longer applies, rather than silently shipping an unpatched console.
+**The console image is built here, not consumed as-is.** It copies rcon-web-admin, with its installed dependencies and core widgets, out of the `itzg/rcon` image and runs it on a digest-pinned Node.js runtime. It also applies two patches to rcon-web-admin's browser code — a `history.pushState` call that throws and takes the page down with it, and a dropdown that renders empty until it is refreshed. The build fails loudly if either patch no longer applies, rather than silently shipping an unpatched console.
 
 **nginx exists because the console listens on two ports** — HTTP on one, its websocket on another — and a browser reaching it through StartOS gets one address. The proxy serves the page, forwards the websocket, and rewrites the console's own endpoint discovery so the browser is told to connect back through the same address.
 
@@ -279,7 +279,7 @@ oneshots:
   - ensure-jre # modded only, when store.javaVersion is not the bundled one; downloads it to start9/jre/<version>/
 subcontainers:
   - minecraft-server-sub # PATH leads with the downloaded Java when one is chosen
-  - rcon-sub # rcon-web-admin from a digest-pinned itzg/rcon, on node:24.22.3-bookworm-slim, plus two frontend patches
+  - rcon-sub # rcon-web-admin from a digest-pinned itzg/rcon, on Node.js, plus two frontend patches
   - rcon-proxy-sub # nginx; unifies the console's http + websocket ports and rewrites /wsconfig
 volumes:
   main: /data # worlds, server.properties, start9/store.json, uploaded modpack, start9/jre/, rcon-db/
