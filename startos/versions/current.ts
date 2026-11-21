@@ -1,18 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '26.3:3',
+  version: '26.3:4',
   releaseNotes: {
     en_US:
-      'Security updates to mitigate CVE-2026-114938 (Java4Shell) and apply the November Node.js fixes. Details: https://calif.io/java4shell/ and https://nodejs.org/en/blog/vulnerability/november-2026-security-releases',
+      'Updates the pinned Minecraft server image to include the upstream Java4Shell fix. Keeps the existing protection for previously cached modded Java runtimes. Details: https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell',
     es_ES:
-      'Actualizaciones de seguridad para mitigar CVE-2026-114938 (Java4Shell) y aplicar las correcciones de noviembre de Node.js. Detalles: https://calif.io/java4shell/ y https://nodejs.org/en/blog/vulnerability/november-2026-security-releases',
+      'Actualiza la imagen fijada del servidor de Minecraft para incluir la corrección de Java4Shell de upstream. Conserva la protección existente para los entornos Java modificados almacenados previamente en caché. Detalles: https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell',
     de_DE:
-      'Sicherheitsupdates zur Entschärfung von CVE-2026-114938 (Java4Shell) und mit den November-Korrekturen für Node.js. Details: https://calif.io/java4shell/ und https://nodejs.org/en/blog/vulnerability/november-2026-security-releases',
+      'Aktualisiert das angeheftete Minecraft-Server-Image mit dem Upstream-Fix für Java4Shell. Der bestehende Schutz für zuvor zwischengespeicherte modifizierte Java-Laufzeiten bleibt erhalten. Details: https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell',
     pl_PL:
-      'Aktualizacje zabezpieczeń ograniczające ryzyko CVE-2026-114938 (Java4Shell) i zawierające listopadowe poprawki Node.js. Szczegóły: https://calif.io/java4shell/ oraz https://nodejs.org/en/blog/vulnerability/november-2026-security-releases',
+      'Aktualizuje przypięty obraz serwera Minecraft, aby zawierał poprawkę Java4Shell od upstreamu. Zachowuje istniejącą ochronę wcześniej zapisanych w pamięci podręcznej zmodyfikowanych środowisk Java. Szczegóły: https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell',
     fr_FR:
-      'Mises à jour de sécurité pour atténuer CVE-2026-114938 (Java4Shell) et appliquer les correctifs de novembre de Node.js. Détails : https://calif.io/java4shell/ et https://nodejs.org/en/blog/vulnerability/november-2026-security-releases',
+      'Met à jour l’image épinglée du serveur Minecraft pour inclure le correctif Java4Shell en amont. Conserve la protection existante pour les environnements Java moddés précédemment mis en cache. Détails : https://adoptium.net/news/2026/11/temurin-november-2026-cspu-java4shell',
   },
   migrations: {
     up: async ({ effects }) => {},

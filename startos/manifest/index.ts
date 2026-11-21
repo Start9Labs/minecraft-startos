@@ -20,7 +20,7 @@ export const manifest = setupManifest({
         dockerBuild: {
           buildArgs: {
             IMAGE:
-              'itzg/minecraft-server:java25@sha256:f7f2222512810f0f0e85133913622cf639be77a5dd1d4b11f24ab675da6ba742',
+              'itzg/minecraft-server:java25@sha256:936047f90da9eda3964e224f0decde4d65f3fa360ce317f03ce66576ad83494b',
           },
         },
       },
